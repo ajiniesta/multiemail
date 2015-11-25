@@ -21,7 +21,7 @@ import javafx.collections.ObservableList;
 import javafx.concurrent.Service;
 import javafx.concurrent.Task;
 
-public class ServiceLoaderExcel extends Service<ObservableList<ObservableList<String>>> {
+public class ServiceLoaderExcel extends Service<ObservableList<Person>> {
 
 	final static Logger logger = Logger.getLogger(ServiceLoaderExcel.class);
 	
@@ -32,12 +32,12 @@ public class ServiceLoaderExcel extends Service<ObservableList<ObservableList<St
 	}
 
 	@Override
-	protected Task<ObservableList<ObservableList<String>>> createTask() {
-		return new Task<ObservableList<ObservableList<String>>>() {
+	protected Task<ObservableList<Person>> createTask() {
+		return new Task<ObservableList<Person>>() {
 
 			@Override
-			protected ObservableList<ObservableList<String>> call() throws Exception {
-				ObservableList<ObservableList<String>> data = FXCollections.observableArrayList();
+			protected ObservableList<Person> call() throws Exception {
+				ObservableList<Person> data = FXCollections.observableArrayList();
 				
 				try (InputStream is = new FileInputStream(inputFile)){
 					Workbook wb = getWorkbook(is);
@@ -67,8 +67,11 @@ public class ServiceLoaderExcel extends Service<ObservableList<ObservableList<St
 						try { 
 							email = row.getCell(2).getStringCellValue();
 						} catch (Exception ex) {}
-						ObservableList<String> auxRow = FXCollections.observableArrayList(name, telephone, email);
-						data.add(auxRow);
+						Person person = new Person();
+						person.setName(name);
+						person.setTelephone(telephone);
+						person.setEmail(email);
+						data.add(person);
 					}
 					updateMessage("Finishd OK ");
 					logger.debug("Data loaded: " + data.size());

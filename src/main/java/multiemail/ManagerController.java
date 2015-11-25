@@ -14,7 +14,6 @@ import org.apache.log4j.Logger;
 
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.value.ChangeListener;
-import javafx.collections.ObservableList;
 import javafx.concurrent.Service;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -45,16 +44,16 @@ public class ManagerController {
 	private ProgressBar progressBar; // Value injected by FXMLLoader
 
 	@FXML // fx:id="tableView"
-	private TableView<ObservableList<String>> tableView;
+	private TableView<Person> tableView;
 
 	@FXML
-	private TableColumn<ObservableList<String>, String> colEmail;
+	private TableColumn<Person, String> colEmail;
 
 	@FXML // fx:id="colName"
-	private TableColumn<ObservableList<String>, String> colName;
+	private TableColumn<Person, String> colName;
 
 	@FXML // fx:id="colTelephone"
-	private TableColumn<ObservableList<String>, String> colTelephone;
+	private TableColumn<Person, String> colTelephone;
 
 	@FXML // fx:id="toolBar"
 	private ToolBar toolBar; // Value injected by FXMLLoader
@@ -67,6 +66,8 @@ public class ManagerController {
 
 	private Properties conf;
 
+	private String initial;
+	
 	// Handler for Button[Button[id=null, styleClass=button]] onAction
 	@FXML
 	void loadFile(ActionEvent event) {
@@ -126,7 +127,7 @@ public class ManagerController {
 		String text = editor.getAccessibleText();
 		logger.debug("Message to send: " + htmlText);
 		logger.debug("Message to send text: " + text);
-		return text != null;
+		return !htmlText.equals(initial);
 	}
 
 	private void abortOperationAlert(String message) {
@@ -159,20 +160,21 @@ public class ManagerController {
 		assert progressBar != null : "fx:id=\"progressBar\" was not injected: check your FXML file 'Manager.fxml'.";
 		assert tableView != null : "fx:id=\"tableView\" was not injected: check your FXML file 'Manager.fxml'.";
 		assert toolBar != null : "fx:id=\"toolBar\" was not injected: check your FXML file 'Manager.fxml'.";
-
+		initial = editor.getHtmlText();
+		
 		// Initialize your logic here: all @FXML variables will have been
 		// injected
 		// Properties configuration = new Properties();
 		// configuration.load();
 
 		colName.setCellValueFactory(param -> {
-			return new SimpleStringProperty(param.getValue().get(0));
+			return new SimpleStringProperty(param.getValue().getName());
 		});
 		colTelephone.setCellValueFactory(param -> {
-			return new SimpleStringProperty(param.getValue().get(1));
+			return new SimpleStringProperty(param.getValue().getTelephone());
 		});
 		colEmail.setCellValueFactory(param -> {
-			return new SimpleStringProperty(param.getValue().get(2));
+			return new SimpleStringProperty(param.getValue().getEmail());
 		});
 
 		conf = new Properties();
@@ -216,7 +218,7 @@ public class ManagerController {
 	}
 
 	private boolean fillConfManually() {
-		String[] keys = new String[]{"mail.smtp.host", "mail.smtp.user", "mail.smtp.pass", "mail.smtp.ssl", "mail.smtp.from"};
+		String[] keys = new String[]{"mail.smtp.host", "mail.smtp.user", "mail.smtp.pass", "mail.smtp.ssl", "mail.from"};
 		String[] dflValues = new String[]{"smtp.gmail.com", "user@gmail.com", "pass", "true", "user@gmail.com"};
 		boolean[] cypher = new boolean[]{false, false, true, false, false};
 		showMessage();

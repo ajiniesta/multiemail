@@ -10,20 +10,18 @@ import org.apache.log4j.Logger;
 import javafx.collections.ObservableList;
 import javafx.concurrent.Service;
 import javafx.concurrent.Task;
-import javafx.scene.web.HTMLEditor;
 
 public class ServiceEmailSender extends Service<Boolean>{
 
 	final static Logger logger = Logger.getLogger(ServiceEmailSender.class);
 	
-	private ObservableList<ObservableList<String>> data;
+	private ObservableList<Person> data;
 	private Properties conf;
 	private EmailContent content;
 
-	public ServiceEmailSender(Properties conf, EmailContent content, ObservableList<ObservableList<String>> data) {
+	public ServiceEmailSender(Properties conf, EmailContent content, ObservableList<Person> data) {
 		this.conf = conf;
 		this.content = content;
-
 		this.data = data;
 	}
 
@@ -34,17 +32,31 @@ public class ServiceEmailSender extends Service<Boolean>{
 
 			@Override
 			protected Boolean call() throws Exception {
-				int total = 100;
-				updateProgress(0, total);
-				for (int i = 0; i < total; i++) {
-					Thread.sleep(100);
-					if(i==50){
-						updateMessage("Everything going smoothly");
+				boolean anyFalse = false;
+				int total = data.size(), count = 0;
+				updateProgress(count, total);
+				for (Person person : data) {
+					
+					updateMessage("Sending email to " + person.getEmail());
+					try{
+						sendEmail(person.getEmail());
+						updateMessage("Email sent properly to " + person.getEmail());
+					}catch(Exception emx){
+						updateMessage("Wrong sent to " + person.getEmail());
+						logger.error("Error sending email", emx);
+						anyFalse = true;
 					}
-					updateProgress(i, total);
+
+					Thread.sleep(Integer.parseInt(conf.getProperty("mail.delay", "100")));
+
+					updateProgress(++count, total);
 				}
-				updateMessage("Finishd OK");
-				return true;
+				if(!anyFalse){
+					updateMessage("Finished OK");
+				}else {
+					updateMessage("There were some errors, please check logs");
+				}
+				return !anyFalse;
 			}
 		};
 	}
@@ -58,14 +70,14 @@ public class ServiceEmailSender extends Service<Boolean>{
 		email.setAuthenticator(new DefaultAuthenticator(username, password));
 		boolean ssl = true;
 		try{
-		ssl = Boolean.parseBoolean(conf.getProperty("mail.smtp.ssl"));
+			ssl = Boolean.parseBoolean(conf.getProperty("mail.smtp.ssl"));
 		}catch(Exception ex){}
 		email.setSSLOnConnect(ssl);
 		email.addTo(emailTo);
 		email.setFrom(conf.getProperty("mail.from"));
 		email.setSubject(content.getSubject());
 		email.setHtmlMsg(content.getHtmlText());
-		email.setTextMsg(content.getAccessibleText());
+//		email.setTextMsg(content.getAccessibleText());
 		email.send();
 	}
 }
