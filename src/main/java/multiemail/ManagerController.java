@@ -1,6 +1,7 @@
 package multiemail;
 
 import java.io.File;
+import java.io.FileInputStream;
 
 /**
  * Sample Skeleton for "Manager.fxml" Controller Class
@@ -10,13 +11,13 @@ import java.io.File;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.Optional;
+import java.util.Properties;
 import java.util.ResourceBundle;
 
 import org.apache.log4j.Logger;
 
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
 import javafx.concurrent.Service;
 import javafx.event.ActionEvent;
@@ -47,26 +48,16 @@ public class ManagerController {
 	private ProgressBar progressBar; // Value injected by FXMLLoader
 
 	@FXML // fx:id="tableView"
-	private TableView<ObservableList<String>> tableView; // Value injected by
-															// FXMLLoader
+	private TableView<ObservableList<String>> tableView;
 
 	@FXML
-	private TableColumn<ObservableList<String>, String> colEmail; // Value
-																	// injected
-																	// by
-																	// FXMLLoader
+	private TableColumn<ObservableList<String>, String> colEmail;
 
 	@FXML // fx:id="colName"
-	private TableColumn<ObservableList<String>, String> colName; // Value
-																	// injected
-																	// by
-																	// FXMLLoader
+	private TableColumn<ObservableList<String>, String> colName;
 
 	@FXML // fx:id="colTelephone"
-	private TableColumn<ObservableList<String>, String> colTelephone; // Value
-																		// injected
-																		// by
-																		// FXMLLoader
+	private TableColumn<ObservableList<String>, String> colTelephone;
 
 	@FXML // fx:id="toolBar"
 	private ToolBar toolBar; // Value injected by FXMLLoader
@@ -76,6 +67,8 @@ public class ManagerController {
 
 	@FXML
 	private Label status;
+
+	private Properties conf;
 
 	// Handler for Button[Button[id=null, styleClass=button]] onAction
 	@FXML
@@ -92,7 +85,7 @@ public class ManagerController {
 			bindService(service);
 			tableView.itemsProperty().bind(service.valueProperty());
 			service.start();
-			
+
 		} else {
 			logger.info("No file to be loaded");
 			abortOperationAlert("No file to be loaded");
@@ -109,18 +102,34 @@ public class ManagerController {
 	@FXML
 	void sendEmails(ActionEvent event) {
 		System.out.println("Sending Emails...");
-		Alert alert = new Alert(AlertType.CONFIRMATION);
-		alert.setTitle("Confirmation");
-		alert.setHeaderText("You are about to send a lot of emails");
-		alert.setContentText("Are you sure to send emails?");
-		Optional<ButtonType> result = alert.showAndWait();
-		if (result.get() == ButtonType.OK) {
-			ServiceEmailSender service = new ServiceEmailSender();
-			bindService(service);
-			service.start();
+		if (checkIfCanSend()) {
+			Alert alert = new Alert(AlertType.CONFIRMATION);
+			alert.setTitle("Confirmation");
+			alert.setHeaderText("You are about to send a lot of emails");
+			alert.setContentText("Are you sure to send emails?");
+			Optional<ButtonType> result = alert.showAndWait();
+			if (result.get() == ButtonType.OK) {
+				ServiceEmailSender service = new ServiceEmailSender(conf,
+						new EmailContent("Fixed subject", editor.getHtmlText(), editor.getAccessibleText()),
+						tableView.getItems());
+				bindService(service);
+				service.start();
+			} else {
+				logger.info("Email sent aborted");
+			}
 		} else {
-			logger.info("Email sent aborted");
+			String message = "No text to send in the message";
+			logger.error(message);
+			abortOperationAlert(message);
 		}
+	}
+
+	private boolean checkIfCanSend() {
+		String htmlText = editor.getHtmlText();
+		String text = editor.getAccessibleText();
+		logger.debug("Message to send: " + htmlText);
+		logger.debug("Message to send text: " + text);
+		return text != null;
 	}
 
 	private void abortOperationAlert(String message) {
@@ -139,16 +148,10 @@ public class ManagerController {
 		progressBar.progressProperty().bind(service.progressProperty());
 		editor.disableProperty().bind(service.runningProperty());
 		status.textProperty().bind(service.messageProperty());
-		service.runningProperty().addListener(new ChangeListener<Boolean>() {
-
-			@Override
-			public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-				if (!newValue) {
-					progressBar.progressProperty().unbind();
-					progressBar.setProgress(0);
-
-				}
-
+		service.runningProperty().addListener((ChangeListener<Boolean>) (observable, oldValue, newValue) -> {
+			if (!newValue) {
+				progressBar.progressProperty().unbind();
+				progressBar.setProgress(0);
 			}
 		});
 	}
@@ -175,6 +178,9 @@ public class ManagerController {
 			return new SimpleStringProperty(param.getValue().get(2));
 		});
 
+		conf = new Properties();
+		
+//		conf.load(new FileInputStream(new File));
 	}
 
 }
