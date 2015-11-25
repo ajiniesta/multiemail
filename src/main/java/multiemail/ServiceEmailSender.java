@@ -54,7 +54,7 @@ public class ServiceEmailSender extends Service<Boolean>{
 		email.setHostName(conf.getProperty("mail.smtp.host"));
 		email.setSmtpPort(Integer.parseInt(conf.getProperty("mail.smtp.port", "465")));
 		String username = conf.getProperty("mail.smtp.user");
-		String password = conf.getProperty("mail.smtp.pass");
+		String password = Cypher.decrypt(conf.getProperty("mail.smtp.pass"));
 		email.setAuthenticator(new DefaultAuthenticator(username, password));
 		boolean ssl = true;
 		try{

@@ -2,12 +2,8 @@ package multiemail;
 
 import java.io.File;
 import java.io.FileInputStream;
-
-/**
- * Sample Skeleton for "Manager.fxml" Controller Class
- * You can copy and paste this code into your favorite IDE
- **/
-
+import java.io.FileWriter;
+import java.io.IOException;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.Optional;
@@ -29,6 +25,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
+import javafx.scene.control.TextInputDialog;
 import javafx.scene.control.ToolBar;
 import javafx.scene.web.HTMLEditor;
 import javafx.stage.FileChooser;
@@ -179,8 +176,85 @@ public class ManagerController {
 		});
 
 		conf = new Properties();
-		
-//		conf.load(new FileInputStream(new File));
+		String userHome = System.getProperty("user.home");
+		String confHome = userHome + System.getProperty("file.separator") + ".multiemail";		
+		logger.debug("Configuartion directory is: " + confHome);
+		File confDir = new File(confHome);
+		if(!confDir.exists()){
+			confDir.mkdirs();
+		}	
+		String confFile = confHome + System.getProperty("file.separator") + "multiemail.properties";
+		try {			
+			conf.load(new FileInputStream(new File(confFile)));
+			logger.info("Properties " + confFile + " properly loaded");
+		} catch (IOException e) {
+			logger.warn("No configuration loaded", e);
+			boolean ok = fillConfManually();
+			if(ok){
+				ok = storeProperties(confFile, "First one");
+			}
+			if (!ok) {
+				logger.error("No configuration detected, application will shutdown. Restart the application and fill the configuration");
+				System.exit(-1);
+			}
+		}
+		String databaseFile = confHome + System.getProperty("file.separator") + "multiemail.db";
+		conf.setProperty("db.file", databaseFile);
+		storeProperties(confFile, "Added db.file");
 	}
 
+	private boolean storeProperties(String confFile, String comments) {
+		boolean ok = true;
+		try (FileWriter fw = new FileWriter(confFile)){
+			conf.store(fw, comments);
+			logger.info("Properties " + confFile + " properly stored");
+		}catch(IOException ex) {
+			logger.error("Error saving the properties", ex);
+			ok = false;
+		}
+		return ok;
+	}
+
+	private boolean fillConfManually() {
+		String[] keys = new String[]{"mail.smtp.host", "mail.smtp.user", "mail.smtp.pass", "mail.smtp.ssl", "mail.smtp.from"};
+		String[] dflValues = new String[]{"smtp.gmail.com", "user@gmail.com", "pass", "true", "user@gmail.com"};
+		boolean[] cypher = new boolean[]{false, false, true, false, false};
+		showMessage();
+		for (int i = 0; i < keys.length; i++) {
+			boolean ok = fillProperty(keys[i], dflValues[i], cypher[i]);
+			if(!ok){
+				return false;
+			}
+		}
+		return true;
+	}
+	
+	private boolean fillProperty(String key, String defaultValue, boolean cypher) {
+		TextInputDialog dialog = new TextInputDialog(defaultValue);
+		dialog.setTitle("Configuration");
+		dialog.setHeaderText("Configuartion Property: " + key);
+		dialog.setContentText("Please enter value:");
+
+		// Traditional way to get the response value.
+		Optional<String> result = dialog.showAndWait();
+		if(result.isPresent()){
+			String output = result.get();
+			if(cypher){
+				output = Cypher.encrypt(output);
+			}
+			conf.setProperty(key, output);
+			return true;					
+		}else {
+			return false;
+		}
+	}
+
+	private void showMessage(){
+		Alert alert;
+		alert = new Alert(AlertType.ERROR);
+		alert.setTitle("No configuration detected");
+		alert.setContentText("Please fill the next configurations to start the application");
+
+		alert.showAndWait();
+	}
 }
